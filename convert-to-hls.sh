@@ -3,8 +3,7 @@
 set -e
 
 # Usage create-vod-hls.sh SOURCE_FILE [OUTPUT_NAME]
-[[ ! "${1}" ]] && echo "Usage: create-vod-hls.sh SOURCE_FILE [OUTPUT_NAME]" && exit 1
-
+[[ ! "${2}" ]] && echo "Usage: create-vod-hls.sh SOURCE_FILE [OUTPUT_NAME]" && exit 1
 # comment/add lines here to control which renditions would be created
 renditions=(
 # resolution  bitrate  audio-rate
@@ -19,9 +18,10 @@ max_bitrate_ratio=1.07          # maximum accepted bitrate fluctuations
 rate_monitor_buffer_ratio=1.5   # maximum buffer size between bitrate conformance checks
 
 #########################################################################
+encryption_flag="${1}"
+source="${2}"
+target="${3}"
 
-source="${1}"
-target="${2}"
 if [[ ! "${target}" ]]; then
   target="${source##*/}" # leave only last component of path
   target="${target%.*}"  # strip extension
@@ -38,6 +38,11 @@ key_frames_interval=${key_frames_interval%.*} # truncate to integer
 static_params="-c:a aac -ar 48000 -c:v h264 -profile:v main -crf 20 -sc_threshold 0"
 static_params+=" -g ${key_frames_interval} -keyint_min ${key_frames_interval} -hls_time ${segment_target_duration}"
 static_params+=" -hls_playlist_type vod"
+
+# if encryption enabled pass keyinfo file
+if ( $encryption_flag ); then
+  static_params+=" -hls_key_info_file file.keyinfo" 
+fi
 
 # misc params
 misc_params="-hide_banner -y"

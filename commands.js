@@ -28,7 +28,7 @@ module.exports = {
 
   mergeAndOverlayOutout: (input, logo, output) => {
     var COMMAND =
-      "-y -i [INTRO] -i [COURSE] -i [OUTRO] -i [LOGO] -filter_complex '[0:v]scale=1280:720:force_original_aspect_ratio=1[v0]; [1:v]scale=1280:720:force_original_aspect_ratio=1[v1]; [2:v]scale=1280:720:force_original_aspect_ratio=1[v2]; [v0][0:a][v1][1:a][v2][2:a]concat=n=3:v=1:a=1[v][a];[v][3:v]overlay=10:10[v]' -map [v] -map [a] -vsync 2 -preset veryfast -movflags faststart [OUTPUT]";
+      "-y -i [INTRO] -i [COURSE] -i [OUTRO] -i [LOGO] -filter_complex '[0:v]scale=1280:720:force_original_aspect_ratio=1[v0]; [1:v]scale=1280:720:force_original_aspect_ratio=1[v1]; [2:v]scale=1280:720:force_original_aspect_ratio=1[v2]; [v0][0:a][v1][1:a][v2][2:a]concat=n=3:v=1:a=1[v][a];[3]format=rgba,colorchannelmixer=aa=0.7[3:v];[v][3:v]overlay=15:15[v]' -map [v] -map [a] -vsync 2 -preset veryfast -movflags faststart [OUTPUT]";
     COMMAND = COMMAND.replaceAll("[INTRO]", input.intro);
     COMMAND = COMMAND.replaceAll("[COURSE]", input.course);
     COMMAND = COMMAND.replaceAll("[OUTRO]", input.outro);
@@ -61,10 +61,11 @@ module.exports = {
     return { cmd: FFMPEG_PATH, args: parseArgsStringToArgv(COMMAND) };
   },
 
-  convertMergeToHLSAbr: (input, outputDir) => {
-    var COMMAND = "[INPUT] [OUTPUT_DIR]";
+  convertMergeToHLSAbr: (input, outputDir, doEncrypt) => {
+    var COMMAND = "[ENC_FLAG] [INPUT] [OUTPUT_DIR]";
     COMMAND = COMMAND.replaceAll("[OUTPUT_DIR]", outputDir);
     COMMAND = COMMAND.replaceAll("[INPUT]", input);
+    COMMAND = COMMAND.replaceAll("[ENC_FLAG]", doEncrypt);
     return { cmd: "./convert-to-hls.sh", args: parseArgsStringToArgv(COMMAND) };
   },
 

@@ -11,6 +11,7 @@ const { join } = require("path");
 const logger = winston.createLogger({
   level: null,
   transports: [
+    new winston.transports.Console(),
     new winston.transports.File({
       filename: join(process.env.ROOT_TEMP_DIR, process.env.ERROR_LOG),
       level: "error",

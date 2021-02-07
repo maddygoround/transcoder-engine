@@ -7,11 +7,9 @@
  *
  *******************************************************************/
 const execa = require("execa");
-
+const { copyFile } = require("fs").promises;
 const {
   convertMergeToHLSAbr,
-  mergeTsToOutput,
-  outputVideoToTS,
   mergeAndOverlayOutout,
   getVideoMetadataCmd,
 } = require("./commands");
@@ -23,12 +21,18 @@ module.exports = async (options) => {
     const outputLoc = options.output;
     const hlsOutLoc = options.hlsOut;
     const logo = options.logo;
-    await mergeOverlayOutputAndSaveToDir(
-      outputLoc,
-      { intro: options.intro, course: options.course, outro: options.outro },
-      logo
-    );
-    await convertToHLSAbrAndSaveToDir(outputLoc, hlsOutLoc);
+
+    if (options.isProcessVideo) {
+      await mergeOverlayOutputAndSaveToDir(
+        outputLoc,
+        { intro: options.intro, course: options.course, outro: options.outro },
+        logo
+      );
+    } else {
+      await copyFile(options.course, options.output);
+    }
+
+    await convertToHLSAbrAndSaveToDir(outputLoc, hlsOutLoc, options.isAes);
 
     return {
       hlsOut: hlsOutLoc,
@@ -39,21 +43,10 @@ module.exports = async (options) => {
   }
 };
 
-// const getVideoMetadata = async (videoUrl) => {
-//   logger.info("Get Video Metdata");
-//   try {
-//     const { cmd, args } = getVideoMetadataCmd(videoUrl);
-//     const { stdout } = await execa(cmd, args);
-//     return stdout;
-//   } catch (error) {
-//     throw new Error(error.message);
-//   }
-// };
-
-const convertToHLSAbrAndSaveToDir = async (inputFile, outputLoc) => {
+const convertToHLSAbrAndSaveToDir = async (inputFile, outputLoc, isAes) => {
   try {
     logger.info(`${inputFile} is going to convert to ABR`);
-    const { cmd, args } = convertMergeToHLSAbr(inputFile, outputLoc);
+    const { cmd, args } = convertMergeToHLSAbr(inputFile, outputLoc, isAes);
     await execa(cmd, args);
   } catch (error) {
     logger.error(`${inputFile} failed to convert - ${JSON.stringify(error)}`);
@@ -73,25 +66,3 @@ const mergeOverlayOutputAndSaveToDir = async (outputLoc, inputs, logo) => {
     throw new Error(error.message);
   }
 };
-
-// const mergeVideosAndSaveToDir = async (outputLoc, inputFile) => {
-//   logger.info(`${inputFile} is going to merge`);
-//   try {
-//     const { cmd, args } = mergeTsToOutput(inputFile, outputLoc);
-//     await execa(cmd, args);
-//   } catch (error) {
-//     logger.error(`${inputFile} failed to merge - ${JSON.stringify(error)}`);
-//     throw new Error(error.message);
-//   }
-// };
-
-// const outputToTs = async (inputFile, outputLoc) => {
-//   logger.info(`${inputFile} is converting to TS`);
-//   try {
-//     const { cmd, args } = outputVideoToTS(inputFile, outputLoc);
-//     await execa(cmd, args);
-//   } catch (error) {
-//     logger.error(`${inputFile} failed to convert - ${JSON.stringify(error)}`);
-//     throw new Error(error.message);
-//   }
-// };

@@ -1,10 +1,16 @@
 #!/usr/bin/env node
+/******************************************************************
+ *
+ * Module is entry point for the transcoding Jobs
+ * @author  Mahendra R
+ * @version 1.0
+ * @since   2021-02-04
+ *
+ *******************************************************************/
 const { writeFile, readFile } = require("fs").promises;
 const {
   existsSync,
   mkdirSync,
-  createWriteStream,
-  unlinkSync,
   readdirSync,
   readFileSync,
   statSync,
@@ -150,21 +156,6 @@ const createDirIfNotDitch = (dir) => {
   }
 };
 
-/**
- * Remove inout file
- * @param {*} dir
- */
-const removeDirIfExists = (dir) => {
-  try {
-    if (existsSync(dir)) {
-      unlinkSync(dir);
-    }
-    return true;
-  } catch (error) {
-    throw new Error(error.message);
-  }
-};
-
 const resizeLogoAndSave = (logo) => {
   return new Promise((resolve, reject) => {
     im.resize(
@@ -191,14 +182,10 @@ const handler = async (body) => {
     const tempOutroFileLoc = join(tempStorageDir, process.env.OUTRO);
     const tempCourseFileLoc = join(tempStorageDir, process.env.COURSE);
     const tempLogoLoc = join(tempStorageDir, process.env.LOGO);
-    // const tempMergeFileLoc = join(tempStorageDir, process.env.MERGE_FILE_NAME);
-
-    // const tempIntroTSFileLoc = join(tempStorageDir, process.env.INTROTS);
-    // const tempOutroTSFileLoc = join(tempStorageDir, process.env.OUTROTS);
-    // const tempCourseTSFileLoc = join(tempStorageDir, process.env.COURSETS);
-
     const outputFileLoc = join(tempStorageDir, process.env.OUTPUT);
     const hlsOutLoc = join(tempStorageDir, "outputs");
+    const isProcessVideo = body.is_process_video;
+    const isAes = body.is_aes;
 
     /**
      * create pitch directory for temp
@@ -207,69 +194,65 @@ const handler = async (body) => {
     createDirIfNotDitch(tempStorageDir);
     createDirIfNotDitch(hlsOutLoc);
 
-    // logger.info(`Remove input.txt if exists`);
-    // removeDirIfExists(tempMergeFileLoc);
-
     /**
      * download assets from bucket
      */
-    logger.info(`Downloading Video Assests`);
-    const downLoadAssetsPromises = [
-      downloadAsset(join(body.read_from, body.client_id, body.intro)),
-      downloadAsset(join(body.read_from, body.client_id, body.outro)),
-      downloadAsset(join(body.read_from, body.client_id, body.course)),
-      downloadAsset(join(body.read_from, body.client_id, body.logo)),
-    ];
+    const coursePath =
+      body.type === "custom"
+        ? join(body.inputbase, body.orgId)
+        : join(body.baseref, "pre", body.orgId, body.folder);
 
-    const response = await Promise.all(downLoadAssetsPromises);
+    const basePath = join(body.baseref, "pre", body.orgId);
+
+    logger.info(`Downloading Video Assests`);
+    const downloadAssetsQueue = [downloadAsset(join(coursePath, body.file))];
+    if (isProcessVideo) {
+      downloadAssetsQueue.push(downloadAsset(join(basePath, body.intro)));
+      downloadAssetsQueue.push(downloadAsset(join(basePath, body.outro)));
+      downloadAssetsQueue.push(downloadAsset(join(basePath, body.logo)));
+    }
+    const response = await Promise.all(downloadAssetsQueue);
     logger.info(`Video Assests Downloaded`);
 
     /**
      * write assets to temp directory
      */
     logger.info(`Writing Videos to Output Directory`);
-    const fileWritePromises = [
-      writeFile(tempIntroFileLoc, response[0].Body),
-      writeFile(tempOutroFileLoc, response[1].Body),
-      writeFile(tempCourseFileLoc, response[2].Body),
-      writeFile(tempLogoLoc, response[3].Body),
-    ];
+    const writeAssetsQueue = [writeFile(tempCourseFileLoc, response[0].Body)];
 
-    await Promise.all(fileWritePromises);
+    if (isProcessVideo) {
+      writeAssetsQueue.push(writeFile(tempIntroFileLoc, response[1].Body));
+      writeAssetsQueue.push(writeFile(tempOutroFileLoc, response[2].Body));
+      writeAssetsQueue.push(writeFile(tempLogoLoc, response[3].Body));
+    }
+
+    await Promise.all(writeAssetsQueue);
     logger.info(`Videos saved to directory`);
 
-    /** resize logo to 120x120 */
-    await resizeLogoAndSave(tempLogoLoc);
-    /**
-     * write file location to txt for merging
-     */
-    // const fileLogger = createWriteStream(tempMergeFileLoc, {
-    //   flags: "a",
-    // });
-
-    // fileLogger.write(`file ${tempIntroTSFileLoc}\r\n`);ls
-    // fileLogger.write(`file ${tempCourseTSFileLoc}\r\n`);
-    // fileLogger.write(`file ${tempOutroTSFileLoc}`);
-    // fileLogger.end();
-
+    if (isProcessVideo) {
+      /** resize logo to 120x120 */
+      await resizeLogoAndSave(tempLogoLoc);
+    }
     /**
      * proccess video for transcoding
      */
     const { hlsOut, videoOut } = await ffmpegEngine({
-      // input: tempMergeFileLoc,
       output: outputFileLoc,
       hlsOut: hlsOutLoc,
       intro: tempIntroFileLoc,
       outro: tempOutroFileLoc,
       course: tempCourseFileLoc,
       logo: tempLogoLoc,
+      isProcessVideo,
+      isAes,
     });
 
-    const rootOutputDir = join(body.write_to, body.client_id, renderId);
+    const rootOutputDir = join(body.baseref, "post", body.orgId, body.folder);
 
     logger.info(
       `Output Video and Output HLS will be avaiable at - ${rootOutputDir}`
     );
+
     logger.info("Video Uploading started");
     await uploadMergeVideoOutput(
       join(rootOutputDir, process.env.OUTPUT),
@@ -283,6 +266,7 @@ const handler = async (body) => {
       hlsOut
     );
     logger.info("HLS Upload Complete");
+
     logger.info("Final Exit (Successfull)");
 
     await uploadLoggerFiles(
@@ -298,7 +282,7 @@ const handler = async (body) => {
   } catch (error) {
     logger.error(`Final Exit (Failure) ${JSON.stringify(error)}`);
     await uploadLoggerFiles(
-      join(body.write_to, body.client_id, renderId, process.env.ERROR_LOG),
+      join(body.baseref, "post", body.orgId, process.env.ERROR_LOG),
       join(process.env.ROOT_TEMP_DIR, process.env.ERROR_LOG)
     );
     /**
@@ -310,15 +294,6 @@ const handler = async (body) => {
 };
 
 (async () => {
-  const event = {
-    read_from: "us/staging/pre",
-    write_to: "us/staging/post",
-    client_id: "mb1220",
-    logo: "logo.png",
-    intro: "intro1.mp4",
-    outro: "outro1.mp4",
-    course: "course.mp4",
-  };
-  //const event = JSON.parse(process.env.AWS_LAMBDA_FUNCTION_EVENT);
+  const event = JSON.parse(process.env.AWS_LAMBDA_FUNCTION_EVENT);
   await handler(event);
 })();

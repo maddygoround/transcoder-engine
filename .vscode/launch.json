@@ -1,0 +1,39 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Launch Program",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${file}",
+            "env": {
+                "BUCKET" : "wjstudio",
+                "INTRO" : "intro.mp4",
+                "OUTRO" : "outro.mp4",
+                "COURSE":"course.mp4",
+                "LOGO":"logo.png",
+                "OUTPUT":"output.mp4",
+                "INTROTS": "intro.ts",
+                "OUTROTS": "outro.ts",
+                "COURSETS": "course.ts",
+                "OUTPUTTS": "output.ts",
+                "OUTPUT_HLS_DIR":"hls",
+                "MERGE_FILE_NAME":"input.txt",
+                "ROOT_TEMP_DIR": "/tmp",
+                "OUTPUT_FOLDER_KEY": "outputs/%s",
+                "WASABI_REGION":"us-west-1",
+                "WASABI_ENDPOINT":"s3.wasabisys.com",
+                "WASABI_ACCESS_KEY":"7ISMB5IOOS31EBUFV7S6",
+                "WASABI_SECRET_KEY":"zVoLYQ6L4QdF1PsJ1A1GRsmFCR1qfz58932qaH6y", 
+                "INFO_LOG":"info.log",
+                "ERROR_LOG":"error.log"
+            }
+        }
+    ]
+}

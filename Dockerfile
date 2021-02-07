@@ -12,7 +12,9 @@ WORKDIR /usr/src/app
 # where available (npm@5+)
 COPY package*.json ./
 RUN npm install
-RUN apk update && apk add bash
+
+# Install tools & libs to compile everything
+RUN apk update && apk add bash && apk add --no-cache imagemagick
 # If you are building your code for production
 # RUN npm install --only=production
 # Bundle app source
