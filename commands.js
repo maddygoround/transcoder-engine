@@ -69,6 +69,11 @@ module.exports = {
     return { cmd: "./convert-to-hls.sh", args: parseArgsStringToArgv(COMMAND) };
   },
 
+  outputTransCodeCMD: (CMD) => {
+    console.log(CMD);
+    return { cmd: FFMPEG_PATH, args: parseArgsStringToArgv(CMD) };
+  },
+
   getVideoMetadataCmd: (videoUrl) => {
     let COMMAND =
       "-v quiet -print_format json -show_format -show_streams [INPUT_VIDEO]";

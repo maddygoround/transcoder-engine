@@ -7,9 +7,11 @@
  * @since   2021-02-04
  *
  *******************************************************************/
+require("dotenv").config();
 const { writeFile, readFile } = require("fs").promises;
 const {
   existsSync,
+  readdir,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -173,7 +175,7 @@ const resizeLogoAndSave = (logo) => {
 };
 
 const handler = async (body) => {
-  const renderId = uuid.v4();
+  const renderId = "ab17986b-d05e-4923-92f3-3dad0a9f54b9"; //uuid.v4();
   const tempStorageDir = join(process.env.ROOT_TEMP_DIR, renderId);
 
   try {
@@ -193,7 +195,6 @@ const handler = async (body) => {
     logger.info(`Creating output directory`);
     createDirIfNotDitch(tempStorageDir);
     createDirIfNotDitch(hlsOutLoc);
-
     /**
      * download assets from bucket
      */
@@ -204,30 +205,30 @@ const handler = async (body) => {
 
     const basePath = join(body.baseref, "pre", body.orgId);
 
-    logger.info(`Downloading Video Assests`);
-    const downloadAssetsQueue = [downloadAsset(join(coursePath, body.file))];
-    if (isProcessVideo) {
-      downloadAssetsQueue.push(downloadAsset(join(basePath, body.intro)));
-      downloadAssetsQueue.push(downloadAsset(join(basePath, body.outro)));
-      downloadAssetsQueue.push(downloadAsset(join(basePath, body.logo)));
-    }
-    const response = await Promise.all(downloadAssetsQueue);
-    logger.info(`Video Assests Downloaded`);
+    // logger.info(`Downloading Video Assests`);
+    // const downloadAssetsQueue = [downloadAsset(join(coursePath, body.file))];
+    // if (isProcessVideo) {
+    //   downloadAssetsQueue.push(downloadAsset(join(basePath, body.intro)));
+    //   downloadAssetsQueue.push(downloadAsset(join(basePath, body.outro)));
+    //   downloadAssetsQueue.push(downloadAsset(join(basePath, body.logo)));
+    // }
+    // const response = await Promise.all(downloadAssetsQueue);
+    // logger.info(`Video Assests Downloaded`);
 
-    /**
-     * write assets to temp directory
-     */
-    logger.info(`Writing Videos to Output Directory`);
-    const writeAssetsQueue = [writeFile(tempCourseFileLoc, response[0].Body)];
+    // /**
+    //  * write assets to temp directory
+    //  */
+    // logger.info(`Writing Videos to Output Directory`);
+    // const writeAssetsQueue = [writeFile(tempCourseFileLoc, response[0].Body)];
 
-    if (isProcessVideo) {
-      writeAssetsQueue.push(writeFile(tempIntroFileLoc, response[1].Body));
-      writeAssetsQueue.push(writeFile(tempOutroFileLoc, response[2].Body));
-      writeAssetsQueue.push(writeFile(tempLogoLoc, response[3].Body));
-    }
+    // if (isProcessVideo) {
+    //   writeAssetsQueue.push(writeFile(tempIntroFileLoc, response[1].Body));
+    //   writeAssetsQueue.push(writeFile(tempOutroFileLoc, response[2].Body));
+    //   writeAssetsQueue.push(writeFile(tempLogoLoc, response[3].Body));
+    // }
 
-    await Promise.all(writeAssetsQueue);
-    logger.info(`Videos saved to directory`);
+    // await Promise.all(writeAssetsQueue);
+    // logger.info(`Videos saved to directory`);
 
     if (isProcessVideo) {
       /** resize logo to 120x120 */
@@ -277,7 +278,7 @@ const handler = async (body) => {
     /**
      * remove temp storage after the rendering is complete
      */
-    rimraf.sync(tempStorageDir);
+    // rimraf.sync(tempStorageDir);
     process.exit(0);
   } catch (error) {
     logger.error(`Final Exit (Failure) ${JSON.stringify(error)}`);
@@ -288,7 +289,7 @@ const handler = async (body) => {
     /**
      * remove temp storage after the rendering is complete
      */
-    rimraf.sync(tempStorageDir);
+    //  rimraf.sync(tempStorageDir);
     process.exit(1);
   }
 };

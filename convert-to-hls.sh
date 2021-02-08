@@ -67,20 +67,19 @@ for rendition in "${renditions[@]}"; do
   bufsize="$(echo "`echo ${bitrate} | grep -oE '[[:digit:]]+'`*${rate_monitor_buffer_ratio}" | bc)"
   bandwidth="$(echo ${bitrate} | grep -oE '[[:digit:]]+')000"
   name="${height}p"
-  
   cmd+=" ${static_params} -vf scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease,pad='iw+mod(iw\,2)':'ih+mod(ih\,2)'"
   cmd+=" -b:v ${bitrate} -maxrate ${maxrate%.*}k -bufsize ${bufsize%.*}k -b:a ${audiorate}"
   cmd+=" -hls_segment_filename ${target}/${name}_%03d.ts ${target}/${name}.m3u8"
-  
+  # echo "${cmd}"
   # add rendition entry in the master playlist
   master_playlist+="#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${resolution}\n${name}.m3u8\n"
 done
 
 # start conversion
-echo -e "Executing command:\nffmpeg ${misc_params} -i ${source} ${cmd}"
-ffmpeg ${misc_params} -i ${source} ${cmd}
+echo -e "Executing command:\nffmpeg ${cmd}"
+# ffmpeg ${misc_params} -i ${source} ${cmd}
 
-# create master playlist file
-echo -e "${master_playlist}" > ${target}/playlist.m3u8
+# # create master playlist file
+# echo -e "${master_playlist}" > ${target}/playlist.m3u8
 
-echo "Done - encoded HLS is at ${target}/"
+# echo "Done - encoded HLS is at ${target}/"
