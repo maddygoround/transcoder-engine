@@ -23,6 +23,7 @@ const AWS = require("aws-sdk");
 const { getType } = require("mime");
 const rimraf = require("rimraf");
 const im = require("imagemagick");
+
 /** layer libs */
 const ffmpegEngine = require("./engine");
 const { logger } = require("./logger");
@@ -173,110 +174,46 @@ const resizeLogoAndSave = (logo) => {
 };
 
 const handler = async (body) => {
-  const renderId = "ab17986b-d05e-4923-92f3-3dad0a9f54b9"; //uuid.v4();
-  const tempStorageDir = join(process.env.ROOT_TEMP_DIR, renderId);
-
+  const renderId = uuid.v4();
   try {
-    logger.info(`Render Id - ${renderId}`);
-    const tempIntroFileLoc = join(tempStorageDir, process.env.INTRO);
-    const tempOutroFileLoc = join(tempStorageDir, process.env.OUTRO);
-    const tempCourseFileLoc = join(tempStorageDir, process.env.COURSE);
-    const tempLogoLoc = join(tempStorageDir, process.env.LOGO);
-    const outputFileLoc = join(tempStorageDir, process.env.OUTPUT);
-    const hlsOutLoc = join(tempStorageDir, "outputs");
-    const isProcessVideo = body.is_process_video;
-    const isAes = body.is_aes;
-
-    /**
-     * create pitch directory for temp
-     */
-    logger.info(`Creating output directory`);
-    createDirIfNotDitch(tempStorageDir);
-    createDirIfNotDitch(hlsOutLoc);
-    /**
-     * download assets from bucket
-     */
-    const coursePath =
-      body.type === "custom"
-        ? join(body.inputbase, body.orgId)
-        : join(body.baseref, "pre", body.orgId, body.folder);
-
-    const basePath = join(body.baseref, "pre", body.orgId);
-
-    // logger.info(`Downloading Video Assests`);
-    // const downloadAssetsQueue = [downloadAsset(join(coursePath, body.file))];
-    // if (isProcessVideo) {
-    //   downloadAssetsQueue.push(downloadAsset(join(basePath, body.intro)));
-    //   downloadAssetsQueue.push(downloadAsset(join(basePath, body.outro)));
-    //   downloadAssetsQueue.push(downloadAsset(join(basePath, body.logo)));
-    // }
-    // const response = await Promise.all(downloadAssetsQueue);
-    // logger.info(`Video Assests Downloaded`);
-
-    // /**
-    //  * write assets to temp directory
-    //  */
-    // logger.info(`Writing Videos to Output Directory`);
-    // const writeAssetsQueue = [writeFile(tempCourseFileLoc, response[0].Body)];
-
-    // if (isProcessVideo) {
-    //   writeAssetsQueue.push(writeFile(tempIntroFileLoc, response[1].Body));
-    //   writeAssetsQueue.push(writeFile(tempOutroFileLoc, response[2].Body));
-    //   writeAssetsQueue.push(writeFile(tempLogoLoc, response[3].Body));
-    // }
-
-    // await Promise.all(writeAssetsQueue);
-    // logger.info(`Videos saved to directory`);
-
-    if (isProcessVideo) {
-      /** resize logo to 120x120 */
-      await resizeLogoAndSave(tempLogoLoc);
+    let result = {};
+    for (const task of body.tasks) {
+      let taskDefination = body[task];
+      taskDefination.type = task;
+      taskDefination = { ...taskDefination, renderId, ...result };
+      if (Array.isArray(taskDefination.use)) {
+        taskDefination = {
+          ...taskDefination,
+          ...taskDefination.use.map((step) => {
+            return body[step];
+          }),
+        };
+      } else if (taskDefination.use) {
+        if (taskDefination.use.steps) {
+          taskDefination = {
+            ...taskDefination,
+            ...taskDefination.use.steps.map((step) => {
+              return body[step];
+            }),
+          };
+        }
+      }
+      result = {
+        ...result,
+        ...(await require(`./agent${taskDefination.agent}`)(taskDefination)),
+      };
     }
-    /**
-     * proccess video for transcoding
-     */
-    const { hlsOut, videoOut } = await ffmpegEngine({
-      output: outputFileLoc,
-      hlsOut: hlsOutLoc,
-      intro: tempIntroFileLoc,
-      outro: tempOutroFileLoc,
-      course: tempCourseFileLoc,
-      logo: tempLogoLoc,
-      isProcessVideo,
-      isAes,
-    });
 
-    const rootOutputDir = join(body.baseref, "post", body.orgId, body.folder);
-
-    logger.info(
-      `Output Video and Output HLS will be avaiable at - ${rootOutputDir}`
-    );
-
-    logger.info("Video Uploading started");
-    await uploadMergeVideoOutput(
-      join(rootOutputDir, process.env.OUTPUT),
-      videoOut
-    );
-    logger.info("Video Upload Complete");
-
-    logger.info("Start Uploading HLS");
-    await uploadm3u8Artifacts(
-      join(rootOutputDir, process.env.OUTPUT_HLS_DIR),
-      hlsOut
-    );
-    logger.info("HLS Upload Complete");
-
-    logger.info("Final Exit (Successfull)");
+    logger.info(`Job Result ${JSON.stringify(result)}`);
 
     await uploadLoggerFiles(
       join(rootOutputDir, process.env.INFO_LOG),
       join(process.env.ROOT_TEMP_DIR, process.env.INFO_LOG)
     );
-
     /**
      * remove temp storage after the rendering is complete
      */
-    // rimraf.sync(tempStorageDir);
+    rimraf.sync(tempStorageDir);
     process.exit(0);
   } catch (error) {
     logger.error(`Final Exit (Failure) ${JSON.stringify(error)}`);
@@ -287,12 +224,56 @@ const handler = async (body) => {
     /**
      * remove temp storage after the rendering is complete
      */
-    //  rimraf.sync(tempStorageDir);
+    rimraf.sync(tempStorageDir);
     process.exit(1);
   }
 };
 
 (async () => {
-  const event = JSON.parse(process.env.AWS_LAMBDA_FUNCTION_EVENT);
+  const event = {
+    import: {
+      agent: "/s3/import",
+      region: "us-east-1",
+      bucket: "transcode-input-bkt",
+      key: "AKIA6OYUVTFHXGAR7QFN",
+      secret: "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",
+      path: "IAMICON_Russian.mp4",
+    },
+    hls_240: {
+      use: "import",
+      agent: "/video/encode",
+      preset: "hls-240p",
+    },
+    hls_360: {
+      use: "import",
+      agent: "/video/encode",
+      preset: "hls-360p",
+    },
+    hls_720: {
+      use: "import",
+      agent: "/video/encode",
+      preset: "hls-720p",
+    },
+    transcode: {
+      use: {
+        steps: ["hls_240", "hls_360", "hls_720"],
+        bundle_steps: true,
+      },
+      agent: "/video/adaptive",
+      playlist_name: "playlist.m3u8",
+      technique: "hls",
+    },
+    export: {
+      use: ["transcode"],
+      region: "us-east-1",
+      agent: "/s3/store",
+      bucket: "transcoder-output-bkt",
+      key: "AKIA6OYUVTFHXGAR7QFN",
+      secret: "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",
+      path: "hls/",
+    },
+    tasks: ["import", "transcode", "export"],
+  };
+  // const event = JSON.parse(process.env.AWS_LAMBDA_FUNCTION_EVENT);
   await handler(event);
 })();

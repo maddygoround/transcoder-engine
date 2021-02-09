@@ -15,7 +15,7 @@ const {
 } = require("./commands");
 const transcoder = require("./transcoder");
 const { logger } = require("./logger");
-module.exports = async (options) => {
+module.exports.engine = async (options) => {
   try {
     logger.info(`Output Video Location - ${options.output}`);
 

@@ -13,6 +13,7 @@
             ],
             "program": "${file}",
             "env": {
+                "INPUT" : "input.mp4",
                 "BUCKET" : "wjstudio",
                 "INTRO" : "intro.mp4",
                 "OUTRO" : "outro.mp4",
@@ -26,7 +27,7 @@
                 "OUTPUT_HLS_DIR":"hls",
                 "MERGE_FILE_NAME":"input.txt",
                 "ROOT_TEMP_DIR": "/tmp",
-                "OUTPUT_FOLDER_KEY": "outputs/%s",
+                "OUTPUT_FOLDER_KEY": "outputs",
                 "WASABI_REGION":"us-west-1",
                 "WASABI_ENDPOINT":"s3.wasabisys.com",
                 "WASABI_ACCESS_KEY":"7ISMB5IOOS31EBUFV7S6",

@@ -69,7 +69,7 @@ module.exports = {
     return { cmd: "./convert-to-hls.sh", args: parseArgsStringToArgv(COMMAND) };
   },
 
-  outputTransCodeCMD: (CMD) => {
+  doTranscode: (CMD) => {
     console.log(CMD);
     return { cmd: FFMPEG_PATH, args: parseArgsStringToArgv(CMD) };
   },
