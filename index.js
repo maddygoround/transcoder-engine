@@ -20,7 +20,6 @@ const {
 const { join, sep } = require("path");
 const uuid = require("uuid");
 const AWS = require("aws-sdk");
-const wasabiEndpoint = new AWS.Endpoint(process.env.WASABI_ENDPOINT);
 const { getType } = require("mime");
 const rimraf = require("rimraf");
 const im = require("imagemagick");
@@ -29,10 +28,9 @@ const ffmpegEngine = require("./engine");
 const { logger } = require("./logger");
 
 const s3 = new AWS.S3({
-  endpoint: wasabiEndpoint,
-  region: process.env.WASABI_REGION,
-  accessKeyId: process.env.WASABI_ACCESS_KEY,
-  secretAccessKey: process.env.WASABI_SECRET_KEY,
+  region: process.env.REGION,
+  accessKeyId: process.env.ACCESS_KEY,
+  secretAccessKey: process.env.SECRET_KEY,
 });
 
 /**
