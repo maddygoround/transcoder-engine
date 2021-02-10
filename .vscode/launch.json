@@ -15,6 +15,7 @@
             "env": {
                 "INPUT" : "input.mp4",
                 "BUCKET" : "wjstudio",
+                "LOGS" : "logs",
                 "INTRO" : "intro.mp4",
                 "OUTRO" : "outro.mp4",
                 "COURSE":"course.mp4",

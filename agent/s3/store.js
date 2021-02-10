@@ -1,17 +1,10 @@
 const AWS = require("aws-sdk");
-const uuid = require("uuid");
 const { join, sep } = require("path");
 const { logger } = require("../../logger");
 const { getType } = require("mime");
-const { writeFile, readFile } = require("fs").promises;
-const {
-  existsSync,
-  readdir,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-} = require("fs");
+const { tim } = require("tinytim");
+const { readFile } = require("fs").promises;
+const { readdirSync, readFileSync, statSync } = require("fs");
 const slasher = require("../../slasher");
 /**
  * Get All files Recursively
@@ -67,15 +60,21 @@ const uploadDirectory = async (s3, bucket, path, dirpath) => {
 };
 
 /**
- * Create directory to proccess video
- * @param {*} dir
+ * Upload Final Video Output to s3
+ * @param {*} location
+ * @param {*} outputVideoPath
  */
-const createDirIfNotDitch = (dir) => {
+const uploadFile = async (location, outputVideoPath) => {
   try {
-    if (!existsSync(dir)) {
-      mkdirSync(dir);
-    }
-    return true;
+    const body = await readFile(outputVideoPath);
+    return s3
+      .putObject({
+        Bucket: process.env.BUCKET,
+        Key: location,
+        Body: body,
+        ContentType: getType(outputVideoPath),
+      })
+      .promise();
   } catch (error) {
     throw new Error(error.message);
   }
@@ -94,52 +93,20 @@ module.exports = async (options) => {
       const target = taskDefination.output;
       const isDirectory = statSync(target).isDirectory();
       if (isDirectory) {
+        options.path = tim(options.path, options);
         return uploadDirectory(s3, options.bucket, options.path, target);
-      } else {
-        // return await uploadMergeVideoOutput(
-        //   join(target, process.env.OUTPUT),
-        //   videoOut
-        // );
       }
     });
 
-    const s3StoreRes = await Promise.all(actions);
+    await Promise.all(actions);
 
     return {
       [options.type]: {
+        output: options.path,
         agent: options.agent,
-        renderId: options.renderId,
+        job: options.job,
       },
     };
-    // const rootOutputDir = join(body.folder);
-    // logger.info(
-    //   `Output Video and Output HLS will be avaiable at - ${rootOutputDir}`
-    // );
-    // logger.info("Video Uploading started");
-    // await uploadMergeVideoOutput(
-    //   join(rootOutputDir, process.env.OUTPUT),
-    //   videoOut
-    // );
-    // logger.info("Video Upload Complete");
-    // logger.info("Start Uploading HLS");
-    // await uploadm3u8Artifacts(
-    //   join(rootOutputDir, process.env.OUTPUT_HLS_DIR),
-    //   hlsOut
-    // );
-    // logger.info("HLS Upload Complete");
-    // logger.info("Final Exit (Successfull)");
-    // await uploadLoggerFiles(
-    //   join(rootOutputDir, process.env.INFO_LOG),
-    //   join(process.env.ROOT_TEMP_DIR, process.env.INFO_LOG)
-    // );
-
-    // return {
-    //   import: {
-    //     agent: body.agent,
-    //     renderId: body.renderId,
-    //     input,
-    //   },
-    // };
   } catch (err) {
     throw err;
   }

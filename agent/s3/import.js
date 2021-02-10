@@ -1,16 +1,8 @@
 const AWS = require("aws-sdk");
-const uuid = require("uuid");
 const { join } = require("path");
 const { logger } = require("../../logger");
-const { writeFile, readFile } = require("fs").promises;
-const {
-  existsSync,
-  readdir,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-} = require("fs");
+const { writeFile } = require("fs").promises;
+const { existsSync, mkdirSync } = require("fs");
 /**
  * Donwload Video Assets from s3
  * @param {*} bucket
@@ -41,9 +33,8 @@ const createDirIfNotDitch = (dir) => {
 
 module.exports = async (options) => {
   try {
-    createDirIfNotDitch(options.renderId);
-
-    const input = join(options.renderId, process.env.INPUT);
+    createDirIfNotDitch(options.job.id);
+    const input = join(options.job.id, process.env.INPUT);
 
     const s3 = new AWS.S3({
       region: options.region,
@@ -51,17 +42,20 @@ module.exports = async (options) => {
       secretAccessKey: options.secret,
     });
 
-    logger.info(`Downloading Video Assests`);
+    /**
+     * downloading video assets from streams
+     */
+    logger.info(`Downloading video assets`);
     const downloadAssetsQueue = [
       downloadAsset(s3, options.bucket, options.path),
     ];
     const response = await Promise.all(downloadAssetsQueue);
-    logger.info(`Video Assests Downloaded`);
+    logger.info(`Video assets downloaded`);
 
     /**
      * write assets to temp directory
      */
-    logger.info(`Writing Videos to Output Directory`);
+    logger.info(`Writing videos to Output Directory`);
     const writeAssetsQueue = [writeFile(input, response[0].Body)];
     await Promise.all(writeAssetsQueue);
     logger.info(`Videos saved to directory`);
@@ -69,7 +63,7 @@ module.exports = async (options) => {
     return {
       [options.type]: {
         agent: options.agent,
-        renderId: options.renderId,
+        job: options.job,
         input,
       },
     };

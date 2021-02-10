@@ -76,7 +76,7 @@ const toHLS = async (options) => {
   let target = options.target;
 
   if (!target) {
-    target = join(options[options.use].renderId, process.env.OUTPUT_FOLDER_KEY);
+    target = join(options[options.use].job.id, process.env.OUTPUT_FOLDER_KEY);
   }
   createDirIfNotDitch(target);
 
@@ -131,7 +131,7 @@ const toHLS = async (options) => {
     return {
       [options.type]: {
         agent: options.agent,
-        renderId: options.renderId,
+        job: options.job,
         output: target,
       },
     };
