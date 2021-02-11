@@ -1,8 +1,15 @@
-const { mkdirSync, existsSync } = require("fs");
+const { mkdirSync, existsSync, createWriteStream } = require("fs");
 const { writeFile } = require("fs").promises;
-const { doTranscode, getVideoMetadataCmd } = require("../../commands");
+const {
+  doTranscode,
+  getVideoMetadataCmd,
+  doWatermark,
+} = require("../../commands");
 const { join } = require("path");
+const { format } = require("util");
 const execa = require("execa");
+const axios = require("axios");
+const im = require("imagemagick");
 /**
  * Create directory to proccess video
  * @param {*} dir
@@ -60,6 +67,60 @@ const hlsRenditions = {
     bitrate: 12000,
     audiorate: 192,
   },
+};
+
+const watermarkPosition = (watermark_position) => {
+  switch (watermark_position) {
+    case "bottom-right":
+      return "main_w-overlay_w-10:main_h-overlay_h-10";
+    case "bottom-left":
+      return "10:main_h-overlay_h-10";
+    case "top-right":
+      return "main_w-overlay_w-10:10";
+    case "top-left":
+      return "10:10";
+    case "center":
+      return "main_w/2-overlay_w/2:main_h/2-overlay_h/2";
+  }
+};
+
+const watermark = async (options) => {
+  try {
+    const watermarkOptions = {
+      alpha: options.watermark_alpha ? options.watermark_alpha : 1,
+      position: watermarkPosition(options.watermark_position),
+    };
+
+    const source = options[options.use].input;
+    let target = options.target;
+
+    if (!target) {
+      const ext = /\.[^.]*$/.exec(source)[0];
+      target = join(
+        options[options.use].job.id,
+        format(process.env.WATERMARK_OUTPUT, ext)
+      );
+    }
+    const { cmd, args } = doWatermark(
+      source,
+      options.watermark_input,
+      target,
+      watermarkOptions
+    );
+
+    await execa(cmd, args);
+
+    return {
+      [options.type]: {
+        agent: options.agent,
+        job: options.job,
+        output: target,
+        input: target,
+      },
+    };
+  } catch (err) {
+    throw err;
+  }
 };
 
 const toHLS = async (options) => {
@@ -133,10 +194,56 @@ const toHLS = async (options) => {
         agent: options.agent,
         job: options.job,
         output: target,
+        input: target,
       },
     };
   }
 };
+
+const download = async (url, dest) => {
+  try {
+    const response = await axios.get(url, {
+      responseType: "stream",
+    });
+
+    new Promise((resolve, reject) => {
+      response.data
+        .pipe(createWriteStream(dest))
+        .on("finish", () => resolve())
+        .on("error", (e) => reject(e));
+    });
+  } catch (err) {
+    throw err;
+  }
+};
+
+const imageSizeInRatio = (logo, size) => {
+  return new Promise((resolve, reject) => {
+    im.identify(logo, function (err, features) {
+      if (err) reject(err);
+      const width = (features.width * size) / 100;
+      const height = (features.height * size) / 100;
+      resolve({ width, height });
+    });
+  });
+};
+const resizeLogoAndSave = (logo, settings) => {
+  return new Promise((resolve, reject) => {
+    im.resize(
+      {
+        srcPath: logo,
+        dstPath: logo,
+        width: settings.width,
+        height: settings.height,
+      },
+      function (err, stdout, stderr) {
+        if (err) reject(err);
+        resolve();
+      }
+    );
+  });
+};
+
 const toMP4 = (options) => {};
 module.exports = async (options) => {
   try {
@@ -147,14 +254,41 @@ module.exports = async (options) => {
       [1]: frames,
     } = parsedMetaData.streams[0].avg_frame_rate.split("/");
     const fps = parseFloat(duration / frames).toFixed(2);
-    switch (options.preset) {
-      case (options.preset.match(/^hls.*/) || {}).input:
-        options = { ...options, fps };
-        return toHLS(options);
-      case "mp4":
-        return toMP4(options);
+    if (options.preset) {
+      switch (options.preset) {
+        case (options.preset.match(/^hls.*/) || {}).input:
+          options = { ...options, fps };
+          return toHLS(options);
+        case "mp4":
+          return toMP4(options);
+        default:
+      }
+    } else if (options.type) {
+      switch (options.type) {
+        case "watermark":
+          const pat = /^https?:\/\/|^\/\//i;
+          const watermark_input = join(
+            options.job.id,
+            process.env.WATERMARK_INPUT
+          );
+          options = { ...options, watermark_input };
+          if (pat.test(options.watermark_url)) {
+            await download(options.watermark_url, watermark_input);
+            if (options.watermark_size) {
+              const { height, width } = await imageSizeInRatio(
+                watermark_input,
+                parseFloat(options.watermark_size.replace("%", ""))
+              );
+              await resizeLogoAndSave(watermark_input, { width, height });
+            }
+            return await watermark(options);
+          } else {
+            switch (options.use) {
+            }
+          }
+      }
     }
-    return options;
+    //return options;
   } catch (err) {
     throw err;
   }

@@ -36,29 +36,29 @@ module.exports = async (options) => {
     createDirIfNotDitch(options.job.id);
     const input = join(options.job.id, process.env.INPUT);
 
-    const s3 = new AWS.S3({
-      region: options.region,
-      accessKeyId: options.key,
-      secretAccessKey: options.secret,
-    });
+    // const s3 = new AWS.S3({
+    //   region: options.region,
+    //   accessKeyId: options.key,
+    //   secretAccessKey: options.secret,
+    // });
 
-    /**
-     * downloading video assets from streams
-     */
-    logger.info(`Downloading video assets`);
-    const downloadAssetsQueue = [
-      downloadAsset(s3, options.bucket, options.path),
-    ];
-    const response = await Promise.all(downloadAssetsQueue);
-    logger.info(`Video assets downloaded`);
+    // /**
+    //  * downloading video assets from streams
+    //  */
+    // logger.info(`Downloading video assets`);
+    // const downloadAssetsQueue = [
+    //   downloadAsset(s3, options.bucket, options.path),
+    // ];
+    // const response = await Promise.all(downloadAssetsQueue);
+    // logger.info(`Video assets downloaded`);
 
-    /**
-     * write assets to temp directory
-     */
-    logger.info(`Writing videos to Output Directory`);
-    const writeAssetsQueue = [writeFile(input, response[0].Body)];
-    await Promise.all(writeAssetsQueue);
-    logger.info(`Videos saved to directory`);
+    // /**
+    //  * write assets to temp directory
+    //  */
+    // logger.info(`Writing videos to Output Directory`);
+    // const writeAssetsQueue = [writeFile(input, response[0].Body)];
+    // await Promise.all(writeAssetsQueue);
+    // logger.info(`Videos saved to directory`);
 
     return {
       [options.type]: {

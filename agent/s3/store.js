@@ -64,15 +64,15 @@ const uploadDirectory = async (s3, bucket, path, dirpath) => {
  * @param {*} location
  * @param {*} outputVideoPath
  */
-const uploadFile = async (location, outputVideoPath) => {
+const uploadFile = async (s3, bucket, path, target) => {
   try {
-    const body = await readFile(outputVideoPath);
+    const body = await readFile(target);
     return s3
       .putObject({
-        Bucket: process.env.BUCKET,
-        Key: location,
+        Bucket: bucket,
+        Key: slasher(join(path, process.env.OUTPUT)),
         Body: body,
-        ContentType: getType(outputVideoPath),
+        ContentType: getType(target),
       })
       .promise();
   } catch (error) {
@@ -92,9 +92,11 @@ module.exports = async (options) => {
       let taskDefination = options[step];
       const target = taskDefination.output;
       const isDirectory = statSync(target).isDirectory();
+      options.path = tim(options.path, options);
       if (isDirectory) {
-        options.path = tim(options.path, options);
         return uploadDirectory(s3, options.bucket, options.path, target);
+      } else {
+        return uploadFile(s3, options.bucket, options.path, target);
       }
     });
 

@@ -15,6 +15,8 @@
             "env": {
                 "INPUT" : "input.mp4",
                 "BUCKET" : "wjstudio",
+                "WATERMARK_INPUT":"watermark.png",
+                "WATERMARK_OUTPUT":"watermark_output%s",
                 "LOGS" : "logs",
                 "INTRO" : "intro.mp4",
                 "OUTRO" : "outro.mp4",

@@ -37,6 +37,17 @@ module.exports = {
     return { cmd: FFMPEG_PATH, args: parseArgsStringToArgv(COMMAND) };
   },
 
+  doWatermark: (input, logo, output, watermark_options) => {
+    var COMMAND =
+      "-y -i [INPUT] -i [LOGO] -filter_complex '[1:v]format=rgba,colorchannelmixer=aa=[ALPHA][a];[0][a]overlay=[POSITION]' -c:v libx264 -vsync 2 -strict -2 [OUTPUT]";
+    COMMAND = COMMAND.replaceAll("[INPUT]", input);
+    COMMAND = COMMAND.replaceAll("[LOGO]", logo);
+    COMMAND = COMMAND.replaceAll("[OUTPUT]", output);
+    COMMAND = COMMAND.replaceAll("[ALPHA]", watermark_options.alpha);
+    COMMAND = COMMAND.replaceAll("[POSITION]", watermark_options.position);
+    return { cmd: FFMPEG_PATH, args: parseArgsStringToArgv(COMMAND) };
+  },
+
   mergeTsToOutput: (inputFile, output) => {
     var COMMAND =
       "-y -f concat -safe 0 -i [INPUT_FILE] -vcodec copy -acodec copy [OUTPUT]";
