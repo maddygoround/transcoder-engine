@@ -1,18 +1,10 @@
-const { mkdirSync, existsSync, createWriteStream } = require("fs");
-const { writeFile } = require("fs").promises;
-const {
-  doTranscode,
-  getVideoMetadataCmd,
-  doWatermark,
-} = require("../../commands");
+const { mkdirSync, existsSync } = require("fs");
+const { doTranscode, getVideoMetadataCmd } = require("../../commands");
 const { join } = require("path");
 const { format } = require("util");
 const execa = require("execa");
-const axios = require("axios");
-const im = require("imagemagick");
 const editly = require("../../editly");
-const { download, readFileStreams, readVideoFileInfo } = require("../../utils");
-const channels = 4;
+const { download, readVideoFileInfo } = require("../../utils");
 /**
  * Create directory to proccess video
  * @param {*} dir
