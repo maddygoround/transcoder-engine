@@ -57,11 +57,13 @@ module.exports = async (options) => {
       "utf-8"
     );
 
+    let t0 = Date.now();
     const { cmd, args } = doTranscode(
       `${misc_params} -i ${source} ${ffmpegCMD.join(" ")}`
     );
 
     await execa(cmd, args);
+    console.log(Date.now() - t0);
 
     return {
       [options.type]: {

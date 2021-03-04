@@ -11,12 +11,19 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${file}",
+            // "args": [
+            //     "-r",
+            //     "esm",
+            //     "${workspaceFolder}/index.js"
+            // ],
+            "program": "index.js",
             "env": {
                 "INPUT" : "input.mp4",
                 "BUCKET" : "wjstudio",
                 "WATERMARK_INPUT":"watermark.png",
                 "WATERMARK_OUTPUT":"watermark_output%s",
+                "RESIZE_OUTPUT":"resize_output%s",
+                "SPLIT_OUTPUT_FOLDER_KEY" : "splits",
                 "LOGS" : "logs",
                 "INTRO" : "intro.mp4",
                 "OUTRO" : "outro.mp4",

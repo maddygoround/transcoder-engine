@@ -1,8 +1,9 @@
 const AWS = require("aws-sdk");
 const { join } = require("path");
+const { createDirIfNotDitch } = require("../../utils");
 const { logger } = require("../../logger");
-const { writeFile } = require("fs").promises;
-const { existsSync, mkdirSync } = require("fs");
+const { getExtension } = require("mime");
+const { format, parse } = require("path");
 /**
  * Donwload Video Assets from s3
  * @param {*} bucket
@@ -16,49 +17,41 @@ const downloadAsset = (s3, bucket, path) => {
   }
 };
 
-/**
- * Create directory to proccess video
- * @param {*} dir
- */
-const createDirIfNotDitch = (dir) => {
-  try {
-    if (!existsSync(dir)) {
-      mkdirSync(dir);
-    }
-    return true;
-  } catch (error) {
-    throw new Error(error.message);
-  }
-};
-
 module.exports = async (options) => {
   try {
     createDirIfNotDitch(options.job.id);
-    const input = join(options.job.id, process.env.INPUT);
+    let input = join(options.job.id, process.env.INPUT);
 
-    // const s3 = new AWS.S3({
-    //   region: options.region,
-    //   accessKeyId: options.key,
-    //   secretAccessKey: options.secret,
-    // });
+    const s3 = new AWS.S3({
+      region: options.region,
+      accessKeyId: options.key,
+      secretAccessKey: options.secret,
+    });
 
-    // /**
-    //  * downloading video assets from streams
-    //  */
-    // logger.info(`Downloading video assets`);
-    // const downloadAssetsQueue = [
-    //   downloadAsset(s3, options.bucket, options.path),
-    // ];
-    // const response = await Promise.all(downloadAssetsQueue);
-    // logger.info(`Video assets downloaded`);
+    /**
+     * downloading video assets from streams
+     */
+    logger.info(`Downloading video assets`);
+    const downloadAssetsQueue = [
+      downloadAsset(s3, options.bucket, options.path),
+    ];
+    const response = await Promise.all(downloadAssetsQueue);
+    logger.info(`Video assets downloaded`);
 
-    // /**
-    //  * write assets to temp directory
-    //  */
-    // logger.info(`Writing videos to Output Directory`);
-    // const writeAssetsQueue = [writeFile(input, response[0].Body)];
-    // await Promise.all(writeAssetsQueue);
-    // logger.info(`Videos saved to directory`);
+    const fileExt = getExtension(response[0].ContentType);
+    input = format({
+      ...parse(input),
+      base: undefined,
+      ext: `.${fileExt}`,
+    });
+
+    /**
+     * write assets to temp directory
+     */
+    logger.info(`Writing videos to Output Directory`);
+    const writeAssetsQueue = [writeFile(input, response[0].Body)];
+    await Promise.all(writeAssetsQueue);
+    logger.info(`Videos saved to directory`);
 
     return {
       [options.type]: {

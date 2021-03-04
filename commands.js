@@ -37,6 +37,26 @@ module.exports = {
     return { cmd: FFMPEG_PATH, args: parseArgsStringToArgv(COMMAND) };
   },
 
+  doCutsWithoutEncoding: (input, start, end, output) => {
+    var COMMAND =
+      "-y -ss [START] -i [INPUT] -t [END] -c:v copy -c:a copy -preset veryfast [OUTPUT]";
+    COMMAND = COMMAND.replaceAll("[INPUT]", input);
+    COMMAND = COMMAND.replaceAll("[OUTPUT]", output);
+    COMMAND = COMMAND.replaceAll("[START]", start);
+    COMMAND = COMMAND.replaceAll("[END]", end);
+    return { cmd: FFMPEG_PATH, args: parseArgsStringToArgv(COMMAND) };
+  },
+
+  doCutsWithEncoding: (input, start, end, output) => {
+    var COMMAND =
+      "-y -ss [START] -i [INPUT] -t [END] -c:a aac -c:v libx264 -crf 18 -preset veryfast [OUTPUT]";
+    COMMAND = COMMAND.replaceAll("[INPUT]", input);
+    COMMAND = COMMAND.replaceAll("[OUTPUT]", output);
+    COMMAND = COMMAND.replaceAll("[START]", start);
+    COMMAND = COMMAND.replaceAll("[END]", end);
+    return { cmd: FFMPEG_PATH, args: parseArgsStringToArgv(COMMAND) };
+  },
+
   doWatermark: (input, logo, output, watermark_options) => {
     var COMMAND =
       "-y -i [INPUT] -i [LOGO] -filter_complex '[1:v]format=rgba,colorchannelmixer=aa=[ALPHA][a];[0][a]overlay=[POSITION]' -c:v libx264 -vsync 2 -strict -2 [OUTPUT]";

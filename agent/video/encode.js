@@ -10,6 +10,9 @@ const { format } = require("util");
 const execa = require("execa");
 const axios = require("axios");
 const im = require("imagemagick");
+const editly = require("../../editly");
+const { download, readFileStreams, readVideoFileInfo } = require("../../utils");
+const channels = 4;
 /**
  * Create directory to proccess video
  * @param {*} dir
@@ -69,54 +72,19 @@ const hlsRenditions = {
   },
 };
 
-const watermarkPosition = (watermark_position) => {
-  switch (watermark_position) {
-    case "bottom-right":
-      return "main_w-overlay_w-10:main_h-overlay_h-10";
-    case "bottom-left":
-      return "10:main_h-overlay_h-10";
-    case "top-right":
-      return "main_w-overlay_w-10:10";
-    case "top-left":
-      return "10:10";
-    case "center":
-      return "main_w/2-overlay_w/2:main_h/2-overlay_h/2";
-  }
+const percentageToSize = (per_size) => {
+  const number = parseInt(per_size.split("%")[0]);
+  return parseFloat(number / 100);
 };
 
-const watermark = async (options) => {
+const imageOverlayLayer = (options) => {
   try {
-    const watermarkOptions = {
-      alpha: options.watermark_alpha ? options.watermark_alpha : 1,
-      position: watermarkPosition(options.watermark_position),
-    };
-
-    const source = options[options.use].input;
-    let target = options.target;
-
-    if (!target) {
-      const ext = /\.[^.]*$/.exec(source)[0];
-      target = join(
-        options[options.use].job.id,
-        format(process.env.WATERMARK_OUTPUT, ext)
-      );
-    }
-    const { cmd, args } = doWatermark(
-      source,
-      options.watermark_input,
-      target,
-      watermarkOptions
-    );
-
-    await execa(cmd, args);
-
     return {
-      [options.type]: {
-        agent: options.agent,
-        job: options.job,
-        output: target,
-        input: target,
-      },
+      type: "image-overlay",
+      path: options.watermark_input,
+      opacity: options.watermark_alpha,
+      width: percentageToSize(options.watermark_size),
+      position: options.watermark_position,
     };
   } catch (err) {
     throw err;
@@ -170,7 +138,10 @@ const toHLS = async (options) => {
   const bufsize = Math.floor(rendition.bitrate * rate_monitor_buffer_ratio);
   const bandwidth = rendition.bitrate * 1024;
   const name = `${height}p`;
-
+  const { width: inputWidth, height: inputHeight } = await readVideoFileInfo(
+    source
+  );
+  const inputAspectRatio = inputWidth / inputHeight;
   let ffmpeg_cmd = `${static_params} -vf scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease,pad='iw+mod(iw\\,2)':'ih+mod(ih\\,2)'`;
   ffmpeg_cmd += ` -b:v ${bitrate}k -maxrate ${maxrate}k -bufsize ${bufsize}k -b:a ${audiorate}k`;
   ffmpeg_cmd += ` -hls_segment_filename ${target}/${name}_%03d.ts ${target}/${name}.m3u8`;
@@ -200,51 +171,8 @@ const toHLS = async (options) => {
   }
 };
 
-const download = async (url, dest) => {
-  try {
-    const response = await axios.get(url, {
-      responseType: "stream",
-    });
-
-    new Promise((resolve, reject) => {
-      response.data
-        .pipe(createWriteStream(dest))
-        .on("finish", () => resolve())
-        .on("error", (e) => reject(e));
-    });
-  } catch (err) {
-    throw err;
-  }
-};
-
-const imageSizeInRatio = (logo, size) => {
-  return new Promise((resolve, reject) => {
-    im.identify(logo, function (err, features) {
-      if (err) reject(err);
-      const width = (features.width * size) / 100;
-      const height = (features.height * size) / 100;
-      resolve({ width, height });
-    });
-  });
-};
-const resizeLogoAndSave = (logo, settings) => {
-  return new Promise((resolve, reject) => {
-    im.resize(
-      {
-        srcPath: logo,
-        dstPath: logo,
-        width: settings.width,
-        height: settings.height,
-      },
-      function (err, stdout, stderr) {
-        if (err) reject(err);
-        resolve();
-      }
-    );
-  });
-};
-
 const toMP4 = (options) => {};
+
 module.exports = async (options) => {
   try {
     const videoMetaData = await getVideoMetadata(options[options.use].input);
@@ -254,6 +182,9 @@ module.exports = async (options) => {
       [1]: frames,
     } = parsedMetaData.streams[0].avg_frame_rate.split("/");
     const fps = parseFloat(duration / frames).toFixed(2);
+    if (!options.preset) {
+      options.preset = "empty";
+    }
     if (options.preset) {
       switch (options.preset) {
         case (options.preset.match(/^hls.*/) || {}).input:
@@ -262,33 +193,67 @@ module.exports = async (options) => {
         case "mp4":
           return toMP4(options);
         default:
-      }
-    } else if (options.type) {
-      switch (options.type) {
-        case "watermark":
+          let target = options.target;
+          const source = options[options.use].input;
+
+          if (!target) {
+            const ext = /\.[^.]*$/.exec(source)[0];
+            target = join(
+              options[options.use].job.id,
+              format(process.env.WATERMARK_OUTPUT, ext)
+            );
+          }
+
+          const clips = [
+            {
+              layers: [
+                {
+                  type: "video",
+                  path: source,
+                  ...(options.resize_strategy
+                    ? { resizeMode: options.resize_strategy }
+                    : {}),
+                },
+              ],
+            },
+          ];
+
           const pat = /^https?:\/\/|^\/\//i;
-          const watermark_input = join(
-            options.job.id,
-            process.env.WATERMARK_INPUT
-          );
-          options = { ...options, watermark_input };
-          if (pat.test(options.watermark_url)) {
-            await download(options.watermark_url, watermark_input);
-            if (options.watermark_size) {
-              const { height, width } = await imageSizeInRatio(
-                watermark_input,
-                parseFloat(options.watermark_size.replace("%", ""))
-              );
-              await resizeLogoAndSave(watermark_input, { width, height });
-            }
-            return await watermark(options);
-          } else {
-            switch (options.use) {
+          if (options.watermark_url) {
+            const watermark_input = join(
+              options.job.id,
+              process.env.WATERMARK_INPUT
+            );
+            options = { ...options, watermark_input };
+            if (pat.test(options.watermark_url)) {
+              await download(options.watermark_url, watermark_input);
+              if (options.watermark_size) {
+                clips[0].layers.push(imageOverlayLayer(options));
+              }
             }
           }
+
+          const edityConfig = {
+            outPath: target,
+            height: options.height,
+            width: options.width,
+            enableFfmpegLog: true,
+            verbose: true,
+            clips,
+          };
+
+          await editly(edityConfig);
+
+          return {
+            [options.type]: {
+              agent: options.agent,
+              job: options.job,
+              output: target,
+              input: target,
+            },
+          };
       }
     }
-    //return options;
   } catch (err) {
     throw err;
   }
