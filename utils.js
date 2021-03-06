@@ -1,13 +1,51 @@
 const { writeFile } = require("fs").promises;
 const { existsSync, mkdirSync, createWriteStream } = require("fs");
 const axios = require("axios");
-const { format, parse } = require("path");
+const { format, parse, join } = require("path");
+const fs = require("fs-extra");
 const { getType, getExtension } = require("mime");
 const execa = require("execa");
 const { Worker } = require("worker_threads");
 const assert = require("assert");
+const AWS = require("aws-sdk");
 const FFMPEG_PATH = "/usr/local/bin/ffmpeg"; //"/opt/bin/ffmpeg";
 const FFPROBE_PATH = "/usr/local/bin/ffprobe"; ///opt/bin/ffprobe";
+const sqs = new AWS.SQS();
+module.exports.publisher = async (body) => {
+  try {
+    const sqsParams = {
+      MessageBody: JSON.stringify(body),
+      QueueUrl: process.env.SQS_URI,
+      DelaySeconds: 5,
+    };
+
+    return await sqs.sendMessage(sqsParams).promise();
+  } catch (err) {
+    throw err;
+  }
+};
+module.exports.sum = (total, num) => {
+  return total + num;
+};
+/**
+ * Get's the size of a file or directory.
+ *
+ * @param {string} p The path to the file or directory
+ * @returns {Promise<number>}
+ */
+const size = async (p) => {
+  return fs.stat(p).then((stat) => {
+    if (stat.isFile()) return stat.size;
+    else if (stat.isDirectory())
+      return fs
+        .readdir(p)
+        .then((entries) => Promise.all(entries.map((e) => size(join(p, e)))))
+        .then((e) => e.reduce((a, c) => a + c, 0));
+    else return 0; // can't take size of a stream/symlink/socket/etc
+  });
+};
+
+module.exports.size = size;
 /**
  * Create directory to proccess video
  * @param {*} dir
@@ -108,20 +146,20 @@ module.exports.download = async (url, dest) => {
         base: undefined,
         ext: `.${fileExt}`,
       });
-      return resolve(dest);
-      // response.data
-      //   .pipe(
-      //     createWriteStream(dest)
-      //       .on("finish", () => {
-      //         return resolve(dest);
-      //       })
-      //       .on("error", (e) => {
-      //         return reject(e);
-      //       })
-      //   )
-      //   .on("error", (e) => {
-      //     return reject(e);
-      //   });
+      // return resolve(dest);
+      response.data
+        .pipe(
+          createWriteStream(dest)
+            .on("finish", () => {
+              return resolve(dest);
+            })
+            .on("error", (e) => {
+              return reject(e);
+            })
+        )
+        .on("error", (e) => {
+          return reject(e);
+        });
     });
   } catch (err) {
     throw err;

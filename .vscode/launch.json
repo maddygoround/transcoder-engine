@@ -24,6 +24,7 @@
                 "WATERMARK_OUTPUT":"watermark_output%s",
                 "RESIZE_OUTPUT":"resize_output%s",
                 "SPLIT_OUTPUT_FOLDER_KEY" : "splits",
+                "SQS_URI" : "https://sqs.us-east-1.amazonaws.com/993791416655/transcoder",
                 "LOGS" : "logs",
                 "INTRO" : "intro.mp4",
                 "OUTRO" : "outro.mp4",

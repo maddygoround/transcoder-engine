@@ -104,6 +104,7 @@ module.exports = async (options) => {
 
     return {
       [options.type]: {
+        use: options.use,
         output: options.path,
         agent: options.agent,
         job: options.job,
