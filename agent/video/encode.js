@@ -5,6 +5,7 @@ const { format } = require("util");
 const execa = require("execa");
 const editly = require("../../editly");
 const { download, readVideoFileInfo } = require("../../utils");
+const { logger } = require("../../logger");
 /**
  * Create directory to proccess video
  * @param {*} dir
@@ -167,6 +168,7 @@ const toMP4 = (options) => {};
 
 module.exports = async (options) => {
   try {
+    logger.info("Go Get Metadata");
     const videoMetaData = await getVideoMetadata(options[options.use].input);
     const parsedMetaData = JSON.parse(videoMetaData);
     const {
@@ -229,8 +231,7 @@ module.exports = async (options) => {
             outPath: target,
             height: options.height,
             width: options.width,
-            enableFfmpegLog: true,
-            verbose: true,
+            keepSourceAudio: options.muted ? option.muted : true,
             clips,
           };
 

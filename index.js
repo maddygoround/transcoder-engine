@@ -8,6 +8,7 @@
  *
  *******************************************************************/
 // require("dotenv").config();
+require("dotenv").config();
 const uuid = require("uuid");
 const rimraf = require("rimraf");
 const axios = require("axios");
@@ -18,7 +19,8 @@ const { logger } = require("./logger");
 const { Credentials } = require("aws-sdk");
 
 const handler = async (body) => {
-  let job = { id: "e04b84b1-e32a-4082-b928-a90a572c7229" }; //uuid.v4() };
+  logger.info("Started");
+  let job = { id: uuid.v4() };
 
   if (process.env.ECS_CONTAINER_METADATA_URI_V4) {
     const response = await axios.get(
@@ -35,6 +37,7 @@ const handler = async (body) => {
     let result = {};
     for (const task of body.tasks) {
       let taskDefination = body[task];
+      logger.info(task);
       taskDefination.type = task;
       taskDefination = { ...taskDefination, ...result, job };
       if (Array.isArray(taskDefination.use)) {
@@ -171,7 +174,7 @@ const handler = async (body) => {
       technique: "hls",
     },
     export: {
-      use: ["transcode"],
+      use: ["watermarked"],
       region: "us-east-1",
       agent: "/s3/store",
       bucket: "walawalabucket",
@@ -179,7 +182,7 @@ const handler = async (body) => {
       secret: "QLS6ITBX2PDqEidiVCtnv+lI9zymLNTkU67wvShj",
       path: "hls/{{job.id}}",
     },
-    tasks: ["import", "transcode", "export"],
+    tasks: ["import", "watermarked", "export"],
     systemParams: { accountId: "123", apiKey: "456" },
   };
   // const event = JSON.parse(process.env.AWS_LAMBDA_FUNCTION_EVENT);
