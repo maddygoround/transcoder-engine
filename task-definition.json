@@ -44,7 +44,7 @@
         }
       ],
       "image": "993791416655.dkr.ecr.us-east-1.amazonaws.com/transcoder-engine",
-      "name": "transcoder-egine-container"
+      "name": "transcoder-engine-container"
     }
   ],
   "memory": "512",
