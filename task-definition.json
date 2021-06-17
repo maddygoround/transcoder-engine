@@ -15,6 +15,10 @@
       "portMappings": [],
       "environment": [
         {
+          "name": "AWS_LAMBDA_FUNCTION_EVENT",
+          "value": ""
+        },
+        {
           "name": "INPUT",
           "value": "input.mp4"
         },
