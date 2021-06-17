@@ -4,6 +4,7 @@ const { createDirIfNotDitch } = require("../../utils");
 const { logger } = require("../../logger");
 const { getExtension } = require("mime");
 const { format, parse } = require("path");
+const { writeFile } = require("fs").promises;
 /**
  * Donwload Video Assets from s3
  * @param {*} bucket

@@ -8,8 +8,10 @@
 				"docker-build"
 			],
 			"dockerRun": {
+				"envFiles": ["${workspaceFolder}/.env"],
 				"command": "node --inspect=0.0.0.0:9229 /usr/src/app/index.js"
 			},
+			
 			"node": {
 				"enableDebugging": true
 			},

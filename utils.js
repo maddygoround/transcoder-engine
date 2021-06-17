@@ -8,6 +8,7 @@ const execa = require("execa");
 const { Worker } = require("worker_threads");
 const assert = require("assert");
 const AWS = require("aws-sdk");
+const { logger } = require("./logger");
 const FFMPEG_PATH = "/usr/local/bin/ffmpeg"; //"/opt/bin/ffmpeg";
 const FFPROBE_PATH = "/usr/local/bin/ffprobe"; ///opt/bin/ffprobe";
 const sqs = new AWS.SQS();
@@ -16,11 +17,13 @@ module.exports.publisher = async (body) => {
     const sqsParams = {
       MessageBody: JSON.stringify(body),
       QueueUrl: process.env.SQS_URI,
-      DelaySeconds: 5,
+      DelaySeconds: 60,
     };
 
+    logger.info(`SQS Params -  ${JSON.stringify(sqsParams)}`);
     return await sqs.sendMessage(sqsParams).promise();
   } catch (err) {
+    logger.info(`ERROR While sending sqs -  ${JSON.stringify(err)}`);
     throw err;
   }
 };

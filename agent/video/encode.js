@@ -231,7 +231,7 @@ module.exports = async (options) => {
             outPath: target,
             height: options.height,
             width: options.width,
-            keepSourceAudio: options.muted ? option.muted : true,
+            keepSourceAudio: options.muted ? !option.muted : true,
             clips,
           };
 
