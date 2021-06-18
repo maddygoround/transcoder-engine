@@ -99,7 +99,7 @@ const handler = async (body) => {
       };
       logger.info(`TaskDetail to Publish ${JSON.stringify(taskDetail)}`);
       await publisher(taskDetail);
-      await axios.post(body.notify_url);
+      // await axios.post(body.notify_url);
     }
 
     logger.info(`Final Exit (Success) ${JSON.stringify(result)}`);
