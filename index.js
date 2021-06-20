@@ -87,7 +87,7 @@ const handler = async (body) => {
     body.systemParams = {
       ...body.systemParams,
       usage: usgaeRes.reduce(sum),
-      isError: false,
+      is_error: false,
     };
 
     if (process.env.ECS_CONTAINER_METADATA_URI_V4) {
@@ -112,11 +112,11 @@ const handler = async (body) => {
     body.systemParams = {
       ...body.systemParams,
       usage: 0,
-      isError: true,
-      errorMessage: error.originalError
+      is_error: true,
+      error_message: error.originalError
         ? error.originalError.message
         : error.message,
-      errorCode: error.code,
+      error_code: error.code,
     };
     if (process.env.ECS_CONTAINER_METADATA_URI_V4) {
       logger.info(`ECS Data to Publish ${JSON.stringify(ecsMetaDataRes.data)}`);

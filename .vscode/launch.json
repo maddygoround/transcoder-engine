@@ -4,38 +4,12 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
-
             {
                 "type": "docker",
                 "request": "launch",
                 "name": "Launch Docker",
                 "preLaunchTask": "docker-run: debug",   
                 "platform": "node",
-            },
-        {
-            "type": "pwa-node",
-            "request": "launch",
-            "name": "Launch Program",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            // "args": [
-            //     "-r",
-            //     "esm",
-            //     "${workspaceFolder}/index.js"
-            // ],
-            "program": "index.js",
-            // "envFile": "${workspaceFolder}/.env",
-            "env": {
-                "INPUT" : "input.mp4",
-                "WATERMARK_INPUT":"watermark.png",
-                "WATERMARK_OUTPUT":"watermark_output%s",
-                "SPLIT_OUTPUT_FOLDER_KEY" : "splits",
-                "SQS_URI" : "https://sqs.us-east-1.amazonaws.com/993791416655/transcoder",
-                "OUTPUT":"output.mp4",
-                "OUTPUT_FOLDER_KEY": "outputs",
             }
-        }
     ]
 }
