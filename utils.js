@@ -17,7 +17,7 @@ module.exports.publisher = async (body) => {
     const sqsParams = {
       MessageBody: JSON.stringify(body),
       QueueUrl: process.env.SQS_URI,
-      DelaySeconds: 60,
+      DelaySeconds: 30,
     };
 
     logger.info(`SQS Params -  ${JSON.stringify(sqsParams)}`);
